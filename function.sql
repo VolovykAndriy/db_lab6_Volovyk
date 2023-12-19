@@ -1,17 +1,29 @@
--- Функція для отримання загальної кількості ігор для вказаної платформи
-CREATE OR REPLACE FUNCTION get_game_count_for_platform(platform_name VARCHAR(50))
-RETURNS INTEGER AS $$
+-- Повертає середню кількість продажів для заданої гри за певний період часу. 
+-- Функція буде приймати назву гри, початковий та кінцевий рік, і повертати середню кількість продажів за цей період.
+-- Створення функції
+CREATE OR REPLACE FUNCTION get_average_sales(game_name VARCHAR(350), start_year INT, end_year INT)
+RETURNS FLOAT AS $$
 DECLARE
-  total_count INTEGER;
+    total_sales FLOAT;
+    num_records INT;
+    avg_sales FLOAT;
 BEGIN
-  SELECT COUNT(*) INTO total_count
-  FROM Game
-  JOIN Platform ON Game.platform_id = Platform.platform_id
-  WHERE Platform.Platform_Name = get_game_count_for_platform.platform_name;
+    -- Розрахунок сумарних продаж та кількості записів
+    SELECT COALESCE(SUM(gs.sales), 0), COUNT(gs.gs_id)
+    INTO total_sales, num_records
+    FROM global_sales gs
+    JOIN game g ON gs.game_id = g.game_id
+    WHERE g.Name = game_name AND gs.year_of_update BETWEEN start_year AND end_year;
 
-  RETURN total_count;
+    -- Розрахунок середніх продаж
+    IF num_records > 0 THEN
+        avg_sales := total_sales / num_records;
+        RETURN avg_sales;
+    ELSE
+        RETURN NULL;
+    END IF;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE PLPGSQL;
 
-
-SELECT get_game_count_for_platform('PC') AS game_count;
+-- Виклик функції для перевірки
+SELECT get_average_sales('FIFA 22', 2022, 2023) AS average_sales;
